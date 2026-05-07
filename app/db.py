@@ -63,105 +63,22 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
 
 # =========================
-# POST MODEL (POSTGRES SAFE)
+# POST MODEL (CLEAN + SAFE)
 # =========================
 
 class Post(Base):
     __tablename__ = "posts"
 
+    # Primary Key (UUID as STRING for simplicity + stability)
     id: Mapped[str] = mapped_column(
         String,
         primary_key=True,
         default=lambda: str(uuid.uuid4()),
     )
 
+    # Foreign Key (keep as STRING to avoid UUID conflicts)
     user_id: Mapped[str] = mapped_column(
         String,
-        ForeignKey("users.id"),
-        nullable=False,
-    )
-
-    caption: Mapped[str | None] = mapped_column(Text)
-
-    url: Mapped[str] = mapped_column(String, nullable=False)
-
-    file_type: Mapped[str] = mapped_column(String, nullable=False)
-
-    file_name: Mapped[str] = mapped_column(String, nullable=False)
-
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow,
-    )
-
-    user = relationship("User", back_populates="posts")
-
-
-# =========================
-# CREATE TABLES
-# =========================
-
-async def create_db_and_tables():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-
-
-# =========================
-# SESSION DEPENDENCY
-# =========================
-
-async def get_async_session() -> AsyncGenerator[AsyncSession, None]:
-    async with async_session_maker() as session:
-        yield session
-
-
-# =========================
-# USER DB DEPENDENCY
-# =========================
-
-async def get_user_db(
-    session: AsyncSession = Depends(get_async_session),
-):
-    yield SQLAlchemyUserDatabase(session, User)
-
-# =========================
-# BASE MODEL
-# =========================
-
-class Base(DeclarativeBase):
-    pass
-
-
-# =========================
-# USER MODEL
-# =========================
-
-class User(SQLAlchemyBaseUserTableUUID, Base):
-    __tablename__ = "users"
-
-    posts = relationship(
-        "Post",
-        back_populates="user",
-        cascade="all, delete-orphan",
-    )
-
-
-# =========================
-# POST MODEL
-# =========================
-
-class Post(Base):
-    __tablename__ = "posts"
-
-    id: Mapped[str] = mapped_column(
-        String,
-        primary_key=True,
-        default=lambda: str(uuid.uuid4()),
-    )
-
-    # ✅ UUID foreign key
-    user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=False,
     )
