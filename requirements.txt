@@ -10,3 +10,11 @@ uvicorn[standard]
 httpx
 feedparser
 fastapi-mail
+fastapi
+uvicorn
+httpx
+feedparser
+python-dotenv
+sqlalchemy
+aiosqlite
+fastapi-users
