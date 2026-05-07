@@ -3,6 +3,9 @@ import uuid
 from datetime import datetime
 import os
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from fastapi import Depends
 
 from fastapi_users.db import (
@@ -11,6 +14,7 @@ from fastapi_users.db import (
 )
 
 from sqlalchemy import String, Text, ForeignKey, DateTime
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
@@ -20,18 +24,26 @@ from sqlalchemy.orm import DeclarativeBase, relationship, Mapped, mapped_column
 
 
 # =========================
-# DATABASE CONFIG (POSTGRES)
+# DATABASE CONFIG (SUPABASE)
 # =========================
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:postgres@localhost:5432/cricapp"
-)
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+if not DATABASE_URL:
+    raise Exception("❌ DATABASE_URL not found in environment variables")
+
+
+# =========================
+# ENGINE
+# =========================
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
     pool_pre_ping=True,
+    connect_args={
+        "statement_cache_size": 0
+    }
 )
 
 async_session_maker = async_sessionmaker(
@@ -49,7 +61,7 @@ class Base(DeclarativeBase):
 
 
 # =========================
-# USER MODEL
+# USER MODEL (FASTAPI USERS)
 # =========================
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
@@ -63,22 +75,20 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
 
 # =========================
-# POST MODEL (CLEAN + SAFE)
+# POST MODEL (POSTGRES CORRECT)
 # =========================
 
 class Post(Base):
     __tablename__ = "posts"
 
-    # Primary Key (UUID as STRING for simplicity + stability)
-    id: Mapped[str] = mapped_column(
-        String,
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         primary_key=True,
-        default=lambda: str(uuid.uuid4()),
+        default=uuid.uuid4,
     )
 
-    # Foreign Key (keep as STRING to avoid UUID conflicts)
-    user_id: Mapped[str] = mapped_column(
-        String,
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         ForeignKey("users.id"),
         nullable=False,
     )
@@ -104,8 +114,14 @@ class Post(Base):
 # =========================
 
 async def create_db_and_tables():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+
+        print("✅ Database tables created successfully")
+
+    except Exception as e:
+        print("❌ DB init failed:", e)
 
 
 # =========================
