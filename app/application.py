@@ -175,9 +175,7 @@ async def get_cricket_news():
 # =========================
 
 @app.get("/api/cricket/live-scores")
-async def get_live_scores(
-    user=Depends(current_active_user),
-):
+async def get_live_scores():
     api_key = get_api_key()
 
     async with httpx.AsyncClient(timeout=10) as client:
@@ -235,9 +233,7 @@ async def get_live_scores(
 # =========================
 
 @app.get("/api/cricket/fixtures")
-async def get_fixtures(
-    user=Depends(current_active_user),
-):
+async def get_fixtures():
     api_key = get_api_key()
 
     async with httpx.AsyncClient(timeout=10) as client:
